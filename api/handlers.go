@@ -14,7 +14,7 @@ type Handler struct {
 
 func (h *Handler) UserHandler(c *gin.Context) {
 	var req struct {
-		Name string `json: "name" binding:"required"`
+		Name string `json:"name" binding:"required"`
 	}
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
