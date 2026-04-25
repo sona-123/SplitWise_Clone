@@ -29,7 +29,7 @@ func (r *Repo) SaveExpense(exp models.Expense) error {
 	//2. Rollback safety
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // safe ignore in defer
 		}
 	}()
 	var expID int
