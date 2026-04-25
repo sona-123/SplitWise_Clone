@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/sona-123/splitwise_clone/api"
@@ -10,21 +12,30 @@ import (
 )
 
 func main() {
-	godotenv.Load()
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+		return
+	}
+
 	db := infra.InitDB()
 
 	repo := &repository.Repo{DB: db}
 	svc := &business.Service{Repo: repo}
 	h := &api.Handler{Service: svc}
 
-	//Initialize Gin router
+	// Initialize Gin router
 	r := gin.Default()
 
-	//Group routes for better organization
+	// Group routes
 	v1 := r.Group("/api")
 	{
 		v1.POST("/users", h.UserHandler)
 		v1.POST("/expenses", h.ExpenseHandler)
 	}
-	r.Run(":8080") // Defaults to listening on 0.0.0.0:8080
+
+	// Run server
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal("Failed to start server:", err)
+	}
 }
