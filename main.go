@@ -32,6 +32,8 @@ func main() {
 	{
 		v1.POST("/users", h.UserHandler)
 		v1.POST("/expenses", h.ExpenseHandler)
+		v1.POST("/groups", h.CreateGroupHandler)
+		v1.GET("/groups/:id/balances", h.BalancesHandler)
 	}
 
 	// Run server
