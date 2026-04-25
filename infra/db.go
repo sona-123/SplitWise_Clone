@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -60,10 +61,26 @@ func InitDB() *sql.DB {
 		log.Fatalf("Failed to create schema: %v", err)
 	}
 
+	// DB Indexes (query Optimization)
+	indexes := `
+	CREATE INDEX IF NOT EXISTS idx_expenses_paid_by ON expenses(paid_by);
+	CREATE INDEX IF NOT EXISTS idx_participants_expense_id ON participants(expense_id);
+	CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON group_members(user_id);
+	`
+
+	_, err = db.Exec(indexes)
+	if err != nil {
+		log.Fatal("Index Creation Error:", err)
+	}
+
 	if err = db.Ping(); err != nil {
 		log.Fatalf("DB not reachable: %v", err)
 	}
 
+	//Connection Pooling
+	db.SetMaxOpenConns(25)                 //Max no. of open connections at any time
+	db.SetMaxIdleConns(10)                 //Max Idle connections kept ready
+	db.SetConnMaxLifetime(time.Minute * 5) //How long a connection is reused before closing
 	fmt.Println("Connected to PostgreSQL")
 	return db
 }
