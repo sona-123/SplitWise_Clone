@@ -20,23 +20,39 @@ func (r *Repo) SaveUser(name string) (models.User, error) {
 }
 
 func (r *Repo) SaveExpense(exp models.Expense) error {
-	var expID int
-
-	query := "INSERT INTO expenses(group_id, paid_by, amount) VALUES($1, $2, $3) RETURNING id"
-	err := r.DB.QueryRow(query, exp.GroupID, exp.PaidBy, exp.Amount).Scan(&expID)
+	// 1. Start transaction
+	tx, err := r.DB.Begin()
 	if err != nil {
 		return err
 	}
 
+	//2. Rollback safety
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback() // safe ignore in defer
+		}
+	}()
+	var expID int
+
+	//3. Insert expense
+	query := "INSERT INTO expenses(group_id, paid_by, amount) VALUES($1, $2, $3) RETURNING id"
+	err = tx.QueryRow(query, exp.GroupID, exp.PaidBy, exp.Amount).Scan(&expID)
+	if err != nil {
+		return err
+	}
+
+	//4. Insert participants
 	for _, uid := range exp.UserIds {
 		query1 := "INSERT INTO participants(expense_id, user_id) VALUES($1, $2)"
-		_, err := r.DB.Exec(query1, expID, uid)
+		_, err := tx.Exec(query1, expID, uid)
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	//5. Commit
+	err = tx.Commit()
+	return err
 }
 
 func (r *Repo) SaveGroup(name string) (models.Group, error) {
