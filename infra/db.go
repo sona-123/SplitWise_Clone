@@ -33,7 +33,8 @@ func InitDB() *sql.DB {
 	);
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
-		name TEXT
+		name TEXT NOT NULL,
+		password TEXT NOT NULL 
 	);
 
 	CREATE TABLE IF NOT EXISTS expenses (

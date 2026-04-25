@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sona-123/splitwise_clone/business"
 	"github.com/sona-123/splitwise_clone/models"
+	"github.com/sona-123/splitwise_clone/utils"
 )
 
 type Handler struct {
@@ -15,14 +16,15 @@ type Handler struct {
 
 func (h *Handler) UserHandler(c *gin.Context) {
 	var req struct {
-		Name string `json:"name" binding:"required"`
+		Name     string `json:"name" binding:"required"`
+		Password string `json:"password" binding:"required,min=8"`
 	}
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Name is required"})
 		return
 	}
-	user, err := h.Service.CreateUser(req.Name)
+	user, err := h.Service.CreateUser(req.Name, req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -102,4 +104,51 @@ func (h *Handler) AddMemberHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User added to group successfully"})
+}
+
+func AuthMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		tokenString := ctx.GetHeader("Authorization")
+		if tokenString == "" {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Missing authorization header",
+			})
+			ctx.Abort()
+			return
+		}
+
+		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+			tokenString = tokenString[7:]
+		}
+
+		userID, err := utils.ValidateToken(tokenString)
+		if err != nil {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Unauthorized",
+			})
+			ctx.Abort()
+			return
+		}
+
+		ctx.Set("current_user_id", userID)
+		ctx.Next()
+	}
+}
+
+func (h *Handler) LoginHandler(ctx *gin.Context) {
+	var req struct {
+		ID       int    `json:"id" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	err := ctx.ShouldBindJSON(&req)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": "ID and Password required"})
+		return
+	}
+	token, err := h.Service.AuthenticateUser(req.ID, req.Password)
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "Unauthorized" + err.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"token": token})
 }
