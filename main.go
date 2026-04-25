@@ -27,14 +27,17 @@ func main() {
 	// Initialize Gin router
 	r := gin.Default()
 
-	// Group routes
-	v1 := r.Group("/api")
+	//Public routes
+	r.POST("/api/users", h.UserHandler)  //SignUp
+	r.POST("/api/login", h.LoginHandler) //Login
+	// Protected routes
+	authorized := r.Group("/api")
+	authorized.Use(api.AuthMiddleware())
 	{
-		v1.POST("/users", h.UserHandler)
-		v1.POST("/expenses", h.ExpenseHandler)
-		v1.POST("/groups", h.CreateGroupHandler)
-		v1.GET("/groups/:id/balances", h.BalancesHandler)
-		v1.POST("/groups/:id/members", h.AddMemberHandler)
+		authorized.POST("/expenses", h.ExpenseHandler)
+		authorized.POST("/groups", h.CreateGroupHandler)
+		authorized.GET("/groups/:id/balances", h.BalancesHandler)
+		authorized.POST("/groups/:id/members", h.AddMemberHandler)
 	}
 
 	// Run server

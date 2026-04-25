@@ -1,16 +1,39 @@
 package business
 
 import (
+	"fmt"
+
 	"github.com/sona-123/splitwise_clone/models"
 	"github.com/sona-123/splitwise_clone/repository"
+	"github.com/sona-123/splitwise_clone/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
 	Repo *repository.Repo
 }
 
-func (s *Service) CreateUser(name string) (models.User, error) {
-	return s.Repo.SaveUser(name)
+func (s *Service) CreateUser(name string, password string) (models.User, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return models.User{}, err
+	}
+	return s.Repo.SaveUser(name, string(hashedPassword))
+}
+
+func (s *Service) AuthenticateUser(id int, password string) (string, error) {
+	user, err := s.Repo.GetUserByID(id)
+	if err != nil {
+		return "", fmt.Errorf("User not found")
+	}
+	err = bcrypt.CompareHashAndPassword(
+		[]byte(user.Password),
+		[]byte(password),
+	)
+	if err != nil {
+		return "", fmt.Errorf("Invalid Credentials")
+	}
+	return utils.GenerateToken(user.Id)
 }
 
 func (s *Service) CreateExpense(exp models.Expense) error {

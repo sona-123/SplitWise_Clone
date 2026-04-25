@@ -12,10 +12,21 @@ type Repo struct {
 	DB *sql.DB
 }
 
-func (r *Repo) SaveUser(name string) (models.User, error) {
+func (r *Repo) SaveUser(name string, hashedPassword string) (models.User, error) {
 	var u models.User
-	query := "INSERT INTO users(name) VALUES($1) RETURNING id, name"
-	err := r.DB.QueryRow(query, name).Scan(&u.Id, &u.Name)
+	query := "INSERT INTO users(name, password) VALUES($1, $2) RETURNING id, name"
+	err := r.DB.QueryRow(query, name, hashedPassword).Scan(&u.Id, &u.Name)
+	return u, err
+}
+
+func (r *Repo) GetUserByID(id int) (models.User, error) {
+	var u models.User
+	err := r.DB.QueryRow("SELECT id, name, password FROM users WHERE id = $1", id).Scan(
+		&u.Id,
+		&u.Name,
+		&u.Password,
+	)
+	fmt.Println(err)
 	return u, err
 }
 
@@ -28,6 +39,7 @@ func (r *Repo) SaveExpense(exp models.Expense) error {
 
 	//2. Rollback safety
 	defer func() {
+		fmt.Println(err)
 		if err != nil {
 			_ = tx.Rollback() // safe ignore in defer
 		}
@@ -93,7 +105,7 @@ GROUP BY e.id, e.paid_by, e.amount`
 }
 
 func (r *Repo) AddUserToGroup(groupID int, userID int) error {
-	query := "INSERT INTO group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
+	query := `INSERT INTO group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`
 	_, err := r.DB.Exec(query, groupID, userID)
 	if err != nil {
 		return err
