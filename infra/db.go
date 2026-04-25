@@ -27,6 +27,10 @@ func InitDB() *sql.DB {
 
 	// Schema creation
 	schema := `
+	CREATE TABLE IF NOT EXISTS groups (
+		id SERIAL PRIMARY KEY,
+		name TEXT NOT NULL
+	);
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		name TEXT
@@ -34,6 +38,7 @@ func InitDB() *sql.DB {
 
 	CREATE TABLE IF NOT EXISTS expenses (
 		id SERIAL PRIMARY KEY,
+		group_id INT REFERENCES groups(id),
 		paid_by INT REFERENCES users(id),
 		amount NUMERIC
 	);
@@ -42,9 +47,10 @@ func InitDB() *sql.DB {
 		expense_id INT REFERENCES expenses(id),
 		user_id INT REFERENCES users(id)
 	);
-	CREATE TABLE IF NOT EXISTS groups (
-		id SERIAL PRIMARY KEY,
-		name TEXT NOT NULL
+	CREATE TABLE IF NOT EXISTS group_members (
+		group_id INT REFERENCES groups(id),
+		user_id INT REFERENCES users(id),
+		PRIMARY KEY (group_id, user_id)
 	);
 	`
 
