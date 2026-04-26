@@ -38,6 +38,7 @@ func main() {
 		authorized.POST("/groups", h.CreateGroupHandler)
 		authorized.GET("/groups/:id/balances", h.BalancesHandler)
 		authorized.POST("/groups/:id/members", h.AddMemberHandler)
+		authorized.GET("/user/summary", h.UserSummaryHandler)
 	}
 
 	// Run server

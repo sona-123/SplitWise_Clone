@@ -13,12 +13,19 @@ type Service struct {
 	Repo *repository.Repo
 }
 
-func (s *Service) CreateUser(name string, password string) (models.User, error) {
+func (s *Service) CreateUser(name string, password string, email string, profilePic string) (models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return models.User{}, err
 	}
-	return s.Repo.SaveUser(name, string(hashedPassword))
+	if profilePic == "" {
+		profilePic = "https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
+	}
+	return s.Repo.SaveUser(name, string(hashedPassword), email, profilePic)
+}
+
+func (s *Service) CreateGroup(name string, creatorID int) (models.Group, error) {
+	return s.Repo.SaveGroup(name, creatorID)
 }
 
 func (s *Service) AuthenticateUser(id int, password string) (string, error) {
@@ -37,6 +44,27 @@ func (s *Service) AuthenticateUser(id int, password string) (string, error) {
 }
 
 func (s *Service) CreateExpense(exp models.Expense) error {
+	if exp.Description == "" {
+		exp.Description = "Uncategorized Expense"
+	}
+
+	if exp.Category == "" {
+		exp.Category = "General"
+	}
+
+	if exp.ReceiptImage == "" {
+		exp.ReceiptImage = "https://cdn-icons-png.flaticon.com/512/3135/3135679.png"
+	}
+	if exp.SplitType == "manual" {
+		totalShares := 0.0
+		for _, share := range exp.Shares {
+			totalShares += share.Amount
+		}
+		// Safety check: shares must equal total amount
+		if totalShares != exp.Amount {
+			return fmt.Errorf("sum of shares (%v) does not equal total amount (%v)", totalShares, exp.Amount)
+		}
+	}
 	return s.Repo.SaveExpense(exp)
 }
 
@@ -105,4 +133,19 @@ func (s *Service) GetBalances(groupID int) ([]models.Balance, error) {
 
 func (s *Service) AddMemberToGroup(groupID int, userID int) error {
 	return s.Repo.AddUserToGroup(groupID, userID)
+}
+
+func (s *Service) GetUserOverallSummary(userID int) (map[string]float64, error) {
+	paid, errP := s.Repo.GetTotalPaidByUser(userID)
+	owed, errO := s.Repo.GetTotalOwedByUser(userID)
+
+	if errP != nil || errO != nil {
+		return nil, fmt.Errorf("failed to calculate financial summary")
+	}
+
+	return map[string]float64{
+		"total_owed_to_you": paid,
+		"total_you_owe":     owed,
+		"net_balance":       paid - owed,
+	}, nil
 }
