@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/lib/pq"
@@ -12,10 +13,11 @@ type Repo struct {
 	DB *sql.DB
 }
 
-func (r *Repo) SaveUser(name string, hashedPassword string) (models.User, error) {
+func (r *Repo) SaveUser(name, hashedPassword, email, profilePic string) (models.User, error) {
 	var u models.User
-	query := "INSERT INTO users(name, password) VALUES($1, $2) RETURNING id, name"
-	err := r.DB.QueryRow(query, name, hashedPassword).Scan(&u.Id, &u.Name)
+	query := "INSERT INTO users(name, password, email, profile_pic) VALUES($1, $2, $3, $4) RETURNING id, name, email, profile_pic"
+	err := r.DB.QueryRow(query, name, hashedPassword, email, profilePic).Scan(&u.Id, &u.Name, &u.Email, &u.ProfilePic)
+	fmt.Println(err)
 	return u, err
 }
 
@@ -40,38 +42,70 @@ func (r *Repo) SaveExpense(exp models.Expense) error {
 	//2. Rollback safety
 	defer func() {
 		fmt.Println(err)
-		if err != nil {
-			_ = tx.Rollback() // safe ignore in defer
-		}
+		_ = tx.Rollback() // safe ignore in defer
 	}()
 	var expID int
 
 	//3. Insert expense
-	query := "INSERT INTO expenses(group_id, paid_by, amount) VALUES($1, $2, $3) RETURNING id"
-	err = tx.QueryRow(query, exp.GroupID, exp.PaidBy, exp.Amount).Scan(&expID)
+	query := "INSERT INTO expenses(group_id, paid_by, amount, description, category, receipt_image, split_type) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	err = tx.QueryRow(query, exp.GroupID, exp.PaidBy, exp.Amount, exp.Description, exp.Category, exp.ReceiptImage, exp.SplitType).Scan(&expID)
 	if err != nil {
 		return err
 	}
 
 	//4. Insert participants
-	for _, uid := range exp.UserIds {
-		query1 := "INSERT INTO participants(expense_id, user_id) VALUES($1, $2)"
-		_, err := tx.Exec(query1, expID, uid)
-		if err != nil {
-			return err
+	if exp.SplitType == "manual" {
+		for _, share := range exp.Shares {
+			query1 := "INSERT INTO participants(expense_id, user_id, share_amount) VALUES($1, $2, $3)"
+			_, err := tx.Exec(query1, expID, share.UserID, share.Amount)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		if len(exp.UserIds) == 0 {
+			return errors.New("no participants")
+		}
+		shareAmt := exp.Amount / float64(len(exp.UserIds))
+		for _, uid := range exp.UserIds {
+			query1 := "INSERT INTO participants(expense_id, user_id, share_amount) VALUES($1, $2, $3)"
+			_, err := tx.Exec(query1, expID, uid, shareAmt)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	//5. Commit
 	err = tx.Commit()
+	fmt.Println(err)
 	return err
 }
 
-func (r *Repo) SaveGroup(name string) (models.Group, error) {
+func (r *Repo) SaveGroup(name string, creatorID int) (models.Group, error) {
 	var g models.Group
-	fmt.Println(name)
-	query := `INSERT INTO groups(name) VALUES($1) RETURNING id, name`
-	err := r.DB.QueryRow(query, name).Scan(&g.ID, &g.Name)
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return models.Group{}, err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	query := `INSERT INTO groups(name, created_by) VALUES($1, $2) RETURNING id, name`
+	err = tx.QueryRow(query, name, creatorID).Scan(&g.ID, &g.Name)
+	if err != nil {
+		return models.Group{}, err
+	}
+	memberQuery := "INSERT INTO group_members(group_id, user_id) VALUES ($1, $2)"
+	_, err = tx.Exec(memberQuery, g.ID, creatorID)
+	if err != nil {
+		return models.Group{}, err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return models.Group{}, err
+	}
 	return g, err
 }
 
@@ -111,4 +145,20 @@ func (r *Repo) AddUserToGroup(groupID int, userID int) error {
 		return err
 	}
 	return err
+}
+
+// GetTotalPaidByUser calculated the sum of all the expenses paid by this user
+func (r *Repo) GetTotalPaidByUser(userID int) (float64, error) {
+	var total float64
+	query := "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE paid_by=$1"
+	err := r.DB.QueryRow(query, userID).Scan(&total)
+	return total, err
+}
+
+// GetTotalOwedByUser calculates the sum of all shares assigned to this user
+func (r *Repo) GetTotalOwedByUser(userID int) (float64, error) {
+	var total float64
+	query := "SELECT COALESCE(SUM(share_amount), 0) FROM participants WHERE user_id = $1"
+	err := r.DB.QueryRow(query, userID).Scan(&total)
+	return total, err
 }
