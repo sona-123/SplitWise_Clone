@@ -7,8 +7,11 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sona-123/splitwise_clone/api"
 	"github.com/sona-123/splitwise_clone/business"
+	_ "github.com/sona-123/splitwise_clone/docs"
 	"github.com/sona-123/splitwise_clone/infra"
 	"github.com/sona-123/splitwise_clone/repository"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -28,6 +31,7 @@ func main() {
 	r := gin.Default()
 
 	//Public routes
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.POST("/api/users", h.UserHandler)  //SignUp
 	r.POST("/api/login", h.LoginHandler) //Login
 	// Protected routes
