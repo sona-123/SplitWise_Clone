@@ -8,13 +8,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sona-123/splitwise_clone/business"
 	"github.com/sona-123/splitwise_clone/models"
-	"github.com/sona-123/splitwise_clone/utils"
 )
 
 type Handler struct {
 	Service *business.Service
 }
 
+// @Summary Register a new user
+// @Description Create a new user with name, password, email, and profile picture
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param request body object true "User Request" example({"name":"Gaurav","password":"123456","email":"gaurav@example.com","profile_pic":"https://img.com/pic.png"})
+// @Success 201 {object} models.User
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 500 {object} map[string]string "Failed to create user"
+// @Router /users [post]
 func (h *Handler) UserHandler(c *gin.Context) {
 	var req struct {
 		Name       string `json:"name" binding:"required"`
@@ -36,6 +45,18 @@ func (h *Handler) UserHandler(c *gin.Context) {
 }
 
 // ExpenseHandler adds a new expense to a specific group
+// @Summary Create a new expense
+// @Description Add an expense to a group (requires authentication)
+// @Tags Expenses
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.Expense true "Expense Data"
+// @Success 201 {object} map[string]string "Expense added"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /expenses [post]
 func (h *Handler) ExpenseHandler(c *gin.Context) {
 	val, exists := c.Get("current_user_id")
 	if !exists {
@@ -71,6 +92,17 @@ func (h *Handler) ExpenseHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Expense added successfully"})
 }
 
+// @Summary Create a new group
+// @Description Create a group with current user as owner
+// @Tags Groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body object true "Group Request" example({"name":"Trip Group"})
+// @Success 201 {object} models.Group
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Failed to create group"
+// @Router /groups [post]
 func (h *Handler) CreateGroupHandler(c *gin.Context) {
 	userID := c.MustGet("current_user_id").(int)
 	var req struct {
@@ -90,6 +122,14 @@ func (h *Handler) CreateGroupHandler(c *gin.Context) {
 }
 
 // BalancesHandler calculates the net settlements with simplification
+// @Summary Get group balances
+// @Description Get simplified balances for a group
+// @Tags Balances
+// @Produce json
+// @Param id path int true "Group ID"
+// @Success 200 {array} models.Balance
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /groups/{id}/balances [get]
 func (h *Handler) BalancesHandler(c *gin.Context) {
 	// Get group_id from URL: /api/groups/:id/balances
 	groupIDStr := c.Param("id")
@@ -103,6 +143,17 @@ func (h *Handler) BalancesHandler(c *gin.Context) {
 	c.JSON(200, balances)
 }
 
+// @Summary Add member to group
+// @Description Add a user to a group
+// @Tags Groups
+// @Accept json
+// @Produce json
+// @Param id path int true "Group ID"
+// @Param request body object true "User ID" example({"user_id":2})
+// @Success 200 {object} map[string]string "User added successfully"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 500 {object} map[string]string "Failed to add member"
+// @Router /groups/{id}/members [post]
 func (h *Handler) AddMemberHandler(c *gin.Context) {
 	// Get group_id from URL /api/groups/:id/members
 	groupID, err := strconv.Atoi(c.Param("id"))
@@ -126,35 +177,16 @@ func (h *Handler) AddMemberHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User added to group successfully"})
 }
 
-func AuthMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		tokenString := ctx.GetHeader("Authorization")
-		if tokenString == "" {
-			ctx.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Missing authorization header",
-			})
-			ctx.Abort()
-			return
-		}
-
-		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
-			tokenString = tokenString[7:]
-		}
-
-		userID, err := utils.ValidateToken(tokenString)
-		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Unauthorized",
-			})
-			ctx.Abort()
-			return
-		}
-
-		ctx.Set("current_user_id", userID)
-		ctx.Next()
-	}
-}
-
+// @Summary Login user
+// @Description Authenticate user and return JWT token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body object true "Login Request" example({"id":1,"password":"123456"})
+// @Success 200 {object} map[string]string "JWT Token"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 401 {object} map[string]string "Unauthorize"
+// @Router /login [post]
 func (h *Handler) LoginHandler(ctx *gin.Context) {
 	var req struct {
 		ID       int    `json:"id" binding:"required"`
@@ -173,6 +205,15 @@ func (h *Handler) LoginHandler(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"token": token})
 }
 
+// @Summary Get user summary
+// @Description Get overall balance summary of the logged-in user
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.User
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /users/summary [get]
 func (h *Handler) UserSummaryHandler(c *gin.Context) {
 	val, exists := c.Get("current_user_id")
 	if !exists {
