@@ -5,10 +5,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/sona-123/splitwise_clone/api"
+	"github.com/sona-123/splitwise_clone/api/handlers"
 	"github.com/sona-123/splitwise_clone/business"
 	_ "github.com/sona-123/splitwise_clone/docs"
 	"github.com/sona-123/splitwise_clone/infra"
+	"github.com/sona-123/splitwise_clone/middleware"
 	"github.com/sona-123/splitwise_clone/repository"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -25,7 +26,7 @@ func main() {
 
 	repo := &repository.Repo{DB: db}
 	svc := &business.Service{Repo: repo}
-	h := &api.Handler{Service: svc}
+	h := &handlers.Handler{Service: svc}
 
 	// Initialize Gin router
 	r := gin.Default()
@@ -36,7 +37,7 @@ func main() {
 	r.POST("/api/login", h.LoginHandler) //Login
 	// Protected routes
 	authorized := r.Group("/api")
-	authorized.Use(api.AuthMiddleware())
+	authorized.Use(middleware.AuthMiddleware())
 	{
 		authorized.POST("/expenses", h.ExpenseHandler)
 		authorized.POST("/groups", h.CreateGroupHandler)
