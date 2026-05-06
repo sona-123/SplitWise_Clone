@@ -35,6 +35,11 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.POST("/api/users", h.UserHandler)  //SignUp
 	r.POST("/api/login", h.LoginHandler) //Login
+
+	//Google Auth routes
+	r.GET("/auth/google", h.GoogleLogin)
+	r.GET("/auth/google/callback", h.GoogleCallback)
+
 	// Protected routes
 	authorized := r.Group("/api")
 	authorized.Use(middleware.AuthMiddleware())

@@ -13,11 +13,10 @@ type Repo struct {
 	DB *sql.DB
 }
 
-func (r *Repo) SaveUser(name, hashedPassword, email, profilePic string) (models.User, error) {
+func (r *Repo) SaveUser(name string, hashedPassword string, email string, profilePic string, authProvider string) (models.User, error) {
 	var u models.User
-	query := "INSERT INTO users(name, password, email, profile_pic) VALUES($1, $2, $3, $4) RETURNING id, name, email, profile_pic"
-	err := r.DB.QueryRow(query, name, hashedPassword, email, profilePic).Scan(&u.Id, &u.Name, &u.Email, &u.ProfilePic)
-	fmt.Println(err)
+	query := "INSERT INTO users(name, password, email, profile_pic, auth_provider) VALUES($1, $2, $3, $4, $5) RETURNING id, name, email, profile_pic, auth_provider"
+	err := r.DB.QueryRow(query, name, hashedPassword, email, profilePic, authProvider).Scan(&u.Id, &u.Name, &u.Email, &u.ProfilePic, &u.AuthProvider)
 	return u, err
 }
 

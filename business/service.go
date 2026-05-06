@@ -21,7 +21,7 @@ func (s *Service) CreateUser(name string, password string, email string, profile
 	if profilePic == "" {
 		profilePic = "https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
 	}
-	return s.Repo.SaveUser(name, string(hashedPassword), email, profilePic)
+	return s.Repo.SaveUser(name, string(hashedPassword), email, profilePic, "local")
 }
 
 func (s *Service) CreateGroup(name string, creatorID int) (models.Group, error) {
@@ -148,4 +148,30 @@ func (s *Service) GetUserOverallSummary(userID int) (map[string]float64, error) 
 		"total_you_owe":     owed,
 		"net_balance":       paid - owed,
 	}, nil
+}
+
+func (s *Service) HandleGoogleLogin(name, email, profilePic string) (models.User, error) {
+	user, err := s.Repo.GetUserByEmail(email)
+
+	if err == nil {
+		return *user, nil
+	}
+
+	if profilePic == "" {
+		profilePic = "https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
+	}
+
+	var emptyPassword string = ""
+	newUser, err := s.Repo.SaveUser(
+		name,
+		emptyPassword,
+		email,
+		profilePic,
+		"google",
+	)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return newUser, nil
 }
