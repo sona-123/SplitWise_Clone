@@ -470,6 +470,9 @@
         "models.User": {
             "type": "object",
             "properties": {
+                "auth_provider": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
