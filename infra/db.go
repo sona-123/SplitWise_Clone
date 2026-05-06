@@ -31,9 +31,10 @@ func InitDB() *sql.DB {
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		name TEXT NOT NULL,
-		password TEXT NOT NULL,
+		password TEXT,
 		email TEXT UNIQUE,
-		profile_pic TEXT
+		profile_pic TEXT,
+		auth_provider TEXT
 	);
 	CREATE TABLE IF NOT EXISTS groups (
 		id SERIAL PRIMARY KEY,
