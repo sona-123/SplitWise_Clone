@@ -4,6 +4,32 @@
         "contact": {}
     },
     "paths": {
+        "/auth/google": {
+            "get": {
+                "description": "Redirect user to Google OAuth login page",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login with Google",
+                "responses": {}
+            }
+        },
+        "/auth/google/callback": {
+            "get": {
+                "description": "Handle Google OAuth callback and generate JWT",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Google OAuth callback",
+                "responses": {}
+            }
+        },
         "/expenses": {
             "post": {
                 "security": [
