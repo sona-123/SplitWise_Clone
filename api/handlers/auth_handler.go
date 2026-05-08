@@ -9,11 +9,21 @@ import (
 	"github.com/sona-123/splitwise_clone/utils"
 )
 
+// @Summary Login with Google
+// @Description Redirect user to Google OAuth login page
+// @Tags Auth
+// @Produce json
+// @Router /auth/google [get]
 func (h *Handler) GoogleLogin(c *gin.Context) {
 	url := utils.GoogleOAuthConfig().AuthCodeURL("randomstate")
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
+// @Summary Google OAuth callback
+// @Description Handle Google OAuth callback and generate JWT
+// @Tags Auth
+// @Produce json
+// @Router /auth/google/callback [get]
 func (h *Handler) GoogleCallback(c *gin.Context) {
 
 	//1.) Get authorization code from Google
