@@ -15,57 +15,30 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/google-login": {
-            "post": {
-                "description": "Verify Google ID token and return user info",
-                "consumes": [
-                    "application/json"
-                ],
+        "/auth/google": {
+            "get": {
+                "description": "Redirect user to Google OAuth login page",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Test Google token verification",
-                "parameters": [
-                    {
-                        "description": "Google ID Token",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.GoogleLoginRequest"
-                        }
-                    }
+                "summary": "Login with Google",
+                "responses": {}
+            }
+        },
+        "/auth/google/callback": {
+            "get": {
+                "description": "Handle Google OAuth callback and generate JWT",
+                "produces": [
+                    "application/json"
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Google OAuth callback",
+                "responses": {}
             }
         },
         "/expenses": {
@@ -449,14 +422,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.GoogleLoginRequest": {
-            "type": "object",
-            "properties": {
-                "id_token": {
-                    "type": "string"
-                }
-            }
-        },
         "models.Balance": {
             "type": "object",
             "properties": {

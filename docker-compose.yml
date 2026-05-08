@@ -14,5 +14,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  backend:
+      build: .
+      container_name: splitwise_backend
+      restart: always
+      ports:
+        - "8080:8080"
+      depends_on:
+        - postgres
+      env_file:
+        - .env
 volumes:
   postgres_data:

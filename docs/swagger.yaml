@@ -1,9 +1,4 @@
 definitions:
-  handlers.GoogleLoginRequest:
-    properties:
-      id_token:
-        type: string
-    type: object
   models.Balance:
     properties:
       amount:
@@ -74,39 +69,22 @@ definitions:
 info:
   contact: {}
 paths:
-  /api/google-login:
-    post:
-      consumes:
-      - application/json
-      description: Verify Google ID token and return user info
-      parameters:
-      - description: Google ID Token
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.GoogleLoginRequest'
+  /auth/google:
+    get:
+      description: Redirect user to Google OAuth login page
       produces:
       - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Test Google token verification
+      responses: {}
+      summary: Login with Google
+      tags:
+      - Auth
+  /auth/google/callback:
+    get:
+      description: Handle Google OAuth callback and generate JWT
+      produces:
+      - application/json
+      responses: {}
+      summary: Google OAuth callback
       tags:
       - Auth
   /expenses:
